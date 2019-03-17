@@ -1,0 +1,31 @@
+{% load blog_filters %}
+
+{% if view.request.user.is_authenticated %}
+  <a href="javascript:void(0)"
+     data-postid="{{ post.id }}"
+     data-direction="up"
+     data-url="{% url 'blog:vote' post_id=post.id direction=1 %}"
+     class="{% if votes|get_item:post.id is True %}text-warning{% else %}text-dark{% endif %}"
+  >+</a>
+  <span data-postid="{{ post.id }}">{{ post.rating }}</span>
+  <a href="javascript:void(0)"
+     data-postid="{{ post.id }}"
+     data-direction="down"
+     data-url="{% url 'blog:vote' post_id=post.id direction=0 %}"
+     class="{% if votes|get_item:post.id is False %}text-warning{% else %}text-dark{% endif %}"
+  >-</a>
+{% else %}
+  <a href="javascript:void(0)"
+     data-toggle="tooltip"
+     data-trigger="focus"
+     title="You need to be authenticated to cast votes."
+     class="text-dark"
+  >+</a>
+  <span data-postid="{{ post.id }}">{{ post.rating }}</span>
+  <a href="javascript:void(0)"
+     data-toggle="tooltip"
+     data-trigger="focus"
+     title="You need to be authenticated to cast votes."
+     class="text-dark"
+  >-</a>
+{% endif %}

@@ -1,0 +1,11 @@
+{% extends 'blog/index.html' %}
+
+{% block content %}
+  {% if author %}
+  <h4>{{ author.username }}`s posts</h4>
+  {% else %}
+  <h4>Author does not exist.</h4>
+  {% endif %}
+
+  {{ block.super }}
+{% endblock %}

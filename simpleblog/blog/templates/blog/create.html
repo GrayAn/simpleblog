@@ -1,0 +1,13 @@
+{% extends 'blog/base.html' %}
+
+{% block content %}
+  {% load bootstrap4 %}
+  <form method="POST">
+    {% csrf_token %}
+    {% bootstrap_form form %}
+    {% bootstrap_form_errors form %}
+    {% bootstrap_button 'Save' button_type='submit' button_class='btn btn-dark' %}
+    {% url 'blog:index' as index_url %}
+    {% bootstrap_button 'Cancel' button_type='link' button_class='btn btn-light' href=index_url %}
+  </form>
+{% endblock %}

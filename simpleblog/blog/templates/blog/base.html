@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>SimpleBlog</title>
+    {% load bootstrap4 %}
+    {% bootstrap_css %}
+    {% bootstrap_javascript jquery='full' %}
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+      <a class="navbar-brand" href="{% url 'blog:index' %}">SimpleBlog</a>
+      <button class="navbar-toggler" type="button" data-toggler="collapse" data-target="simpleBlogNavbar">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="simpleBlogNavbar">
+        <ul class="navbar-nav">
+          {% if view.request.user.is_authenticated %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'blog:create' %}">New post</a>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+    </nav>
+    <div class="container">
+      {% bootstrap_messages %}
+      {% block content %}{% endblock %}
+    </div>
+    {% block tail_js %}{% endblock %}
+  </body>
+</html>

@@ -1,0 +1,18 @@
+{% extends 'blog/base.html' %}
+
+{% block content %}
+  {% csrf_token %}
+  <h3>{{ post.title }}</h3>
+  <h5 class="text-muted">Posted at {{ post.created }}</h5>
+  <h5 class="text-muted">by <a href="{% url 'blog:author' author_id=post.author.id %}">{{ post.author }}</a></h5>
+  <div>{{ post.text|linebreaks }}</div>
+  <h5>
+    {% include 'blog/rating.html' %}
+  </h5>
+{% endblock %}
+
+{% load static %}
+
+{% block tail_js %}
+  <script src="{% static 'blog/vote.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,5 @@
+{% load bootstrap4 %}
+
+{% if paginator.num_pages > 1 %}
+  {% bootstrap_pagination page_obj %}
+{% endif %}
