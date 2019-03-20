@@ -10,7 +10,16 @@ class IndexView(generic.ListView):
     model = Post
     paginate_by = 50
     template_name = 'blog/index.html'
-    ordering = '-created'
+    available_orderings = {
+        'created': 'Creation time',
+        'rating': 'Rating',
+    }
+
+    def get_ordering(self):
+        ordering = self.request.GET.get('ordering')
+        if ordering is None or ordering.strip('-') not in self.available_orderings:
+            ordering = '-created'
+        return ordering
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -18,6 +27,9 @@ class IndexView(generic.ListView):
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
+        context['ordering_with_direction'] = self.get_ordering()
+        context['ordering'] = context['ordering_with_direction'].strip('-')
+        context['available_orderings'] = self.available_orderings
         if self.request.user.is_authenticated:
             votes = Vote.objects.filter(author=self.request.user)
             context['votes'] = {vote.post_id: vote.up for vote in votes}

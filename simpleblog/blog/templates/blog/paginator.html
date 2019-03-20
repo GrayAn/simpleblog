@@ -1,5 +1,27 @@
 {% load bootstrap4 %}
 
+Sort by
+{% for ordering_key, ordering_label in available_orderings.items %}
+  <a href="{% if '-'|add:ordering_key != ordering_with_direction %}
+             {% build_url ordering='-'|add:ordering_key %}
+           {% else %}
+             {% build_url ordering=ordering_key %}
+           {% endif %}"
+     {% if ordering_key == ordering %}
+     class="font-weight-bold"
+     {% endif %}
+  >{{ ordering_label }}
+  {% if ordering_key == ordering %}
+    {% if ordering == ordering_with_direction %}
+      <span>&#9660;</span>
+    {% else %}
+      <span>&#9650;</span>
+    {% endif %}
+  {% endif %}
+  </a>
+{% endfor %}
+
 {% if paginator.num_pages > 1 %}
-  {% bootstrap_pagination page_obj %}
+  {% build_url as template_url %}
+  {% bootstrap_pagination page_obj url=template_url %}
 {% endif %}
