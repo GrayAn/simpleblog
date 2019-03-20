@@ -8,13 +8,13 @@ from .models import Post, Vote
 class IndexView(generic.ListView):
     context_object_name = 'posts'
     model = Post
-    paginate_by = 10
+    paginate_by = 50
     template_name = 'blog/index.html'
     ordering = '-created'
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.prefetch_related('vote_set')
+        return queryset.prefetch_related('author')
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
@@ -86,26 +86,35 @@ class DetailView(generic.DetailView):
 
 def cast_vote(request, post_id, direction):
     try:
-        vote = Vote.objects.get(post_id=post_id, author=request.user)
-    except Vote.DoesNotExist:
-        vote = Vote()
-        vote.post_id = post_id
-        vote.author = request.user
+        post = Post.objects.get(pk=post_id)
+    except Post.DoesNotExist:
+        return JsonResponse({'code': 404, 'msg': 'Post {} does not exist'.format(post_id)}, status=404)
 
-    if vote.up is bool(direction):
-        data = {
-            'vote': None,
-            'change': -1 if vote.up else 1,
-        }
-        vote.delete()
+    try:
+        vote = Vote.objects.get(post=post, author=request.user)
+    except Vote.DoesNotExist:
+        vote_direction = None
     else:
-        data = {
-            'vote': bool(direction),
-            'change': 1 if direction else -1,
-        }
-        if vote.up is not None:
-            data['change'] *= 2
+        vote_direction = vote.up
+        post = vote.post  # The same post but with updated ratings after vote removal
+        vote.delete()
+
+    if vote_direction is not bool(direction):
+
+        vote = Vote()
+        vote.post = post
+        vote.author = request.user
         vote.up = bool(direction)
         vote.save()
+        data = {
+            'vote': vote.up,
+        }
+    else:
+        data = {
+            'vote': None,
+        }
+
+    data['upvotes'] = post.upvotes
+    data['downvotes'] = post.downvotes
 
     return JsonResponse(data)

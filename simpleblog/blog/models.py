@@ -1,7 +1,5 @@
-import datetime
-
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, transaction
 from django.urls import reverse
 
 
@@ -10,23 +8,22 @@ class Post(models.Model):
 
     title = models.CharField(max_length=255)
     text = models.TextField()
-    created = models.DateTimeField()
+    created = models.DateTimeField(auto_now_add=True)
+    upvotes = models.IntegerField(default=0)
+    downvotes = models.IntegerField(default=0)
+    rating = models.IntegerField(default=0)
 
     def get_absolute_url(self):
         return reverse('blog:details', args=(str(self.id),))
 
-    @property
-    def rating(self):
-        return sum(1 if vote.up else -1 for vote in self.vote_set.all())
-
     def __str__(self):
         return self.title
 
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        if not self.id and not self.created:
-            self.created = datetime.datetime.utcnow()
-        return super().save(force_insert=force_insert, force_update=force_update,
-                            using=using, update_fields=update_fields)
+    class Meta:
+        indexes = [
+            models.Index(fields=('created',)),
+            models.Index(fields=('rating',)),
+        ]
 
 
 class Vote(models.Model):
@@ -37,3 +34,29 @@ class Vote(models.Model):
 
     class Meta:
         unique_together = ('post', 'author')
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if self.pk is None:
+            if self.up:
+                self.post.upvotes += 1
+                self.post.rating += 1
+            else:
+                self.post.downvotes += 1
+                self.post.rating -= 1
+            with transaction.atomic():
+                self.post.save()
+                return super().save(force_insert=force_insert, force_update=force_update,
+                                    using=using, update_fields=update_fields)
+        return super().save(force_insert=force_insert, force_update=force_update,
+                            using=using, update_fields=update_fields)
+
+    def delete(self, using=None, keep_parents=False):
+        if self.up:
+            self.post.upvotes -= 1
+            self.post.rating -= 1
+        else:
+            self.post.downvotes -= 1
+            self.post.rating += 1
+        with transaction.atomic():
+            self.post.save()
+            return super().delete(using=using, keep_parents=keep_parents)

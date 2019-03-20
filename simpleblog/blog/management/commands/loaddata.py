@@ -1,63 +1,120 @@
-import csv
-import datetime
-import os
+from datetime import datetime, timedelta
+from random import normalvariate, random
 
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
-from ...models import Post
+from ...models import Post, Vote
+
+
+# Total number of users
+USERS_NUMBER = 50000
+# Number of authors among users
+AUTHORS_NUMBER = 5000
+# Number of posts every author has
+POSTS_BY_AUTHOR = 10
+
+# Number of votes of a user is calculated
+# as normal distribution in the random_vote_number function
+MAX_VOTES_BY_USER = 1000
+
+# Number of inserts in a bulk create request
+INSERTS_BY_REQUEST = 500
+
+
+def random_post(first_post_id):
+    n = normalvariate(0, 0.2)
+    total = AUTHORS_NUMBER * POSTS_BY_AUTHOR
+    offset = total // 2 + int(n * total) // 5
+    return first_post_id + min(offset, total)
+
+
+def random_vote_number():
+    n = normalvariate(0.5, 0.5)
+    return max(int(MAX_VOTES_BY_USER * n / 3), 0)
 
 
 class Command(BaseCommand):
     help = 'Loads dummy authors and posts to the database'
 
     def handle(self, *args, **options):
-        users = {user.username: user for user in User.objects.all()}
+        password_hash = make_password('123')
+        users = []
+        for i in range(USERS_NUMBER):
 
-        current_directory = os.path.dirname(os.path.realpath(__file__))
-        data_directory = os.path.normpath(os.path.join(current_directory, '..', '..', '..', 'data'))
+            user = User()
+            user.username = 'user{:05}'.format(i)
+            user.email = '{}@simpleblog.org'.format(user.username)
+            user.password = password_hash
+            user.is_staff = True
+            users.append(user)
 
-        authors_file_path = os.path.join(data_directory, 'authors.csv')
-        articles_file_path = os.path.join(data_directory, 'articles.csv')
+            if len(users) == INSERTS_BY_REQUEST:
+                User.objects.bulk_create(users)
+                users = []
 
-        with open(authors_file_path, 'r') as f:
+        if users:
+            User.objects.bulk_create(users)
+        del users
 
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['login'] not in users:
+        self.stdout.write(self.style.SUCCESS('Users were created'))
 
-                    user = User()
-                    user.username = row['login']
-                    user.first_name = row['firstname']
-                    user.last_name = row['lastname']
-                    user.email = row['email']
-                    user.set_password('123')
-                    user.is_staff = True
-                    user.save()
-                    users[user.username] = user
+        first_user_id = User.objects.order_by('id')[0].id
 
-        self.stdout.write(self.style.SUCCESS('Authors were uploaded'))
+        dt = datetime(2018, 1, 1)
+        posts = []
+        for i in range(first_user_id, first_user_id + AUTHORS_NUMBER):
+            for j in range(POSTS_BY_AUTHOR):
 
-        with open(articles_file_path, 'r') as f:
+                post = Post()
+                post.author_id = i
+                post.title = 'Post #{}-{}'.format(i, j)
+                post.text = 'Post #{}-{} data\n'.format(i, j) * 50
+                post.created = dt + timedelta(seconds=i * POSTS_BY_AUTHOR + j)
+                posts.append(post)
 
-            reader = csv.DictReader(f)
-            for row in reader:
+                if len(posts) == INSERTS_BY_REQUEST:
+                    Post.objects.bulk_create(posts)
+                    posts = []
 
-                if row['login'] not in users:
-                    raise CommandError('User {} does not exist'.format(row['login']))
+        if posts:
+            Post.objects.bulk_create(posts)
+        del posts
 
-                user = users[row['login']]
+        self.stdout.write(self.style.SUCCESS('Posts were created'))
 
-                try:
-                    post = Post.objects.get(author=user, title=row['title'])
-                except Post.DoesNotExist:
-                    post = Post()
-                    post.author = user
-                    post.title = row['title']
+        first_post_id = Post.objects.order_by('id')[0].id
 
-                dt = datetime.datetime.strptime(row['date'], '%Y-%m-%dT%H:%M:%S')
-                post.created = dt.replace(tzinfo=datetime.timezone.utc)
-                post.text = row['text']
+        for i in range(USERS_NUMBER):
+            vote_number = random_vote_number()
+            votes = {}
+            for j in range(vote_number):
+
+                post_id = random_post(first_post_id)
+                if post_id in votes:
+                    continue
+
+                vote = Vote()
+                vote.author_id = first_user_id + i
+                vote.post_id = post_id
+                vote.up = random() > 0.1
+                votes[post_id] = vote
+
+            Vote.objects.bulk_create(votes.values())
+
+            if i % 1000 == 0 and i:
+                self.stdout.write('Votes for {} users were created'.format(i))
+
+        self.stdout.write(self.style.SUCCESS('Votes were created'))
+
+        for post in Post.objects.all():
+            upvotes = Vote.objects.filter(post=post, up=True).count()
+            downvotes = Vote.objects.filter(post=post, up=False).count()
+            if upvotes or downvotes:
+                post.upvotes = upvotes
+                post.downvotes = downvotes
+                post.rating = upvotes - downvotes
                 post.save()
 
-        self.stdout.write(self.style.SUCCESS('Articles were uploaded'))
+        self.stdout.write(self.style.SUCCESS('Post ratings were updated'))

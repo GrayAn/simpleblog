@@ -20,4 +20,10 @@ Installation
 
   python simpleblog/manage.py loaddata
 
+The data loading may take some time as:
+
+* 50000 users are created.
+* 5000 of them are authors with 10 posts each.
+* Every user cast a random number of votes (up to 1000) for random posts.
+
 All users are created with the password "123".

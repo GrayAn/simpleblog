@@ -16,7 +16,8 @@ $(function () {
         var up = $(`a[data-postid="${postId}"][data-direction="up"]`);
         var down = $(`a[data-postid="${postId}"][data-direction="down"]`);
         var rating = $(`span[data-postid="${postId}"]`);
-        rating.text(1 * rating.text() + data.change);
+        rating.attr('title', `Upvotes - ${data.upvotes}, downvotes - ${data.downvotes}`);
+        rating.text(data.upvotes - data.downvotes);
         switch (data.vote) {
           case null:
             up.attr('class', 'text-dark');

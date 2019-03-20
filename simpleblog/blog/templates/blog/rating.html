@@ -7,7 +7,9 @@
      data-url="{% url 'blog:vote' post_id=post.id direction=1 %}"
      class="{% if votes|get_item:post.id is True %}text-warning{% else %}text-dark{% endif %}"
   >+</a>
-  <span data-postid="{{ post.id }}">{{ post.rating }}</span>
+  <span data-postid="{{ post.id }}"
+        title="Upvotes - {{ post.upvotes }}, downvotes - {{ post.downvotes }}"
+  >{{ post.rating }}</span>
   <a href="javascript:void(0)"
      data-postid="{{ post.id }}"
      data-direction="down"
@@ -21,7 +23,9 @@
      title="You need to be authenticated to cast votes."
      class="text-dark"
   >+</a>
-  <span data-postid="{{ post.id }}">{{ post.rating }}</span>
+  <span data-postid="{{ post.id }}"
+        title="Upvotes - {{ post.upvotes }}, downvotes - {{ post.downvotes }}"
+  >{{ post.rating }}</span>
   <a href="javascript:void(0)"
      data-toggle="tooltip"
      data-trigger="focus"
